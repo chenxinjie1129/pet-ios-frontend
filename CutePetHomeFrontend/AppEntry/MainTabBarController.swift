@@ -18,6 +18,9 @@ import FSPagerView
 // 导入视图控制器
 import Kingfisher
 
+// 导入自定义视图控制器
+import MJRefresh
+
 class MainTabBarController: UITabBarController {
 
     // MARK: - 生命周期
@@ -79,8 +82,8 @@ class MainTabBarController: UITabBarController {
     }
 
     private func createMallViewController() -> UINavigationController {
-        // 创建商城视图控制器（临时使用占位视图控制器）
-        let mallVC = createPlaceholderViewController(title: "商城", message: "商城内容将在这里显示")
+        // 创建商城视图控制器
+        let mallVC = MallViewController()
 
         // 设置TabBar项
         mallVC.tabBarItem = UITabBarItem(
