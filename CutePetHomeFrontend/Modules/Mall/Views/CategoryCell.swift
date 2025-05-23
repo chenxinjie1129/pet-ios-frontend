@@ -9,9 +9,9 @@ import UIKit
 import SnapKit
 
 class CategoryCell: UICollectionViewCell {
-    
+
     // MARK: - UI组件
-    
+
     // 分类图标
     private let iconImageView: UIImageView = {
         let imageView = UIImageView()
@@ -19,7 +19,7 @@ class CategoryCell: UICollectionViewCell {
         imageView.tintColor = AppTheme.Color.textPrimary
         return imageView
     }()
-    
+
     // 分类名称
     private let nameLabel: UILabel = {
         let label = UILabel()
@@ -28,7 +28,7 @@ class CategoryCell: UICollectionViewCell {
         label.textAlignment = .center
         return label
     }()
-    
+
     // 选中指示器
     private let selectionIndicator: UIView = {
         let view = UIView()
@@ -36,66 +36,69 @@ class CategoryCell: UICollectionViewCell {
         view.isHidden = true
         return view
     }()
-    
+
     // MARK: - 属性
-    
+
     static let reuseIdentifier = "CategoryCell"
-    
+
     override var isSelected: Bool {
         didSet {
             updateSelectionState()
         }
     }
-    
+
     // MARK: - 初始化
-    
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     // MARK: - UI设置
-    
+
     private func setupUI() {
-        // 设置单元格背景
+        // 设置单元格背景和圆角
         contentView.backgroundColor = .white
-        
+        contentView.layer.cornerRadius = 8
+        contentView.layer.borderWidth = 0.5
+        contentView.layer.borderColor = AppTheme.Color.border.cgColor
+
         // 添加子视图
         contentView.addSubview(iconImageView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(selectionIndicator)
-        
+
         // 设置约束
         iconImageView.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(8)
+            make.top.equalToSuperview().offset(12)
             make.centerX.equalToSuperview()
-            make.width.height.equalTo(24)
+            make.width.height.equalTo(36) // 增大图标尺寸
         }
-        
+
         nameLabel.snp.makeConstraints { make in
-            make.top.equalTo(iconImageView.snp.bottom).offset(4)
+            make.top.equalTo(iconImageView.snp.bottom).offset(8) // 增加间距
             make.left.right.equalToSuperview().inset(4)
-            make.bottom.equalToSuperview().offset(-8)
+            make.bottom.equalToSuperview().offset(-16) // 增加底部间距
         }
-        
+
         selectionIndicator.snp.makeConstraints { make in
             make.bottom.equalToSuperview()
             make.centerX.equalToSuperview()
-            make.width.equalTo(20)
-            make.height.equalTo(2)
+            make.width.equalTo(30) // 增加指示器宽度
+            make.height.equalTo(3) // 增加指示器高度
         }
     }
-    
+
     // MARK: - 配置方法
-    
+
     func configure(with category: ProductCategory) {
         // 设置分类名称
         nameLabel.text = category.name
-        
+
         // 设置图标
         if let iconName = category.icon {
             if iconName.hasPrefix("http") {
@@ -115,13 +118,13 @@ class CategoryCell: UICollectionViewCell {
             // 默认图标
             iconImageView.image = UIImage(systemName: "tag")
         }
-        
+
         // 更新选中状态
         updateSelectionState()
     }
-    
+
     // MARK: - 辅助方法
-    
+
     private func updateSelectionState() {
         if isSelected {
             // 选中状态
@@ -130,6 +133,8 @@ class CategoryCell: UICollectionViewCell {
             iconImageView.tintColor = AppTheme.Color.primary
             selectionIndicator.isHidden = false
             contentView.backgroundColor = AppTheme.Color.background.withAlphaComponent(0.5)
+            contentView.layer.borderColor = AppTheme.Color.primary.cgColor
+            contentView.layer.borderWidth = 1.0
         } else {
             // 未选中状态
             nameLabel.textColor = AppTheme.Color.textPrimary
@@ -137,22 +142,26 @@ class CategoryCell: UICollectionViewCell {
             iconImageView.tintColor = AppTheme.Color.textPrimary
             selectionIndicator.isHidden = true
             contentView.backgroundColor = .white
+            contentView.layer.borderColor = AppTheme.Color.border.cgColor
+            contentView.layer.borderWidth = 0.5
         }
     }
-    
+
     // MARK: - 重用准备
-    
+
     override func prepareForReuse() {
         super.prepareForReuse()
-        
+
         // 重置图标
         iconImageView.image = nil
-        
+
         // 重置标签
         nameLabel.text = nil
-        
+
         // 重置选中状态
         selectionIndicator.isHidden = true
         contentView.backgroundColor = .white
+        contentView.layer.borderColor = AppTheme.Color.border.cgColor
+        contentView.layer.borderWidth = 0.5
     }
 }
