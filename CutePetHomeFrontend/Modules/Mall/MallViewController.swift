@@ -9,134 +9,118 @@ import UIKit
 import SnapKit
 import RxSwift
 import RxCocoa
-import FSPagerView
 import MJRefresh
+import Kingfisher
 
 class MallViewController: UIViewController {
 
     // MARK: - UI组件
 
-    // 搜索栏
-    private lazy var searchBar: UISearchBar = {
-        let searchBar = UISearchBar()
-        searchBar.placeholder = "搜索商品"
-        searchBar.searchBarStyle = .minimal
-        searchBar.tintColor = AppTheme.Color.primary
-        return searchBar
+    // 顶部搜索容器
+    private lazy var searchContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 4
+        view.layer.shadowOpacity = 0.1
+        return view
     }()
 
-    // 滚动视图（主容器）
-    private lazy var scrollView: UIScrollView = {
-        let scrollView = UIScrollView()
-        scrollView.showsVerticalScrollIndicator = false
-        scrollView.backgroundColor = AppTheme.Color.background
-        scrollView.refreshControl = refreshControl
-        return scrollView
+    // 搜索框
+    private lazy var searchBar: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppTheme.Color.background
+        view.layer.cornerRadius = 20
+        view.layer.borderWidth = 1
+        view.layer.borderColor = AppTheme.Color.border.cgColor
+        return view
     }()
 
-    // 内容容器
-    private lazy var contentView: UIView = {
+    // 搜索图标
+    private lazy var searchIcon: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(systemName: "magnifyingglass")
+        imageView.tintColor = AppTheme.Color.textTertiary
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+
+    // 搜索文本框
+    private lazy var searchTextField: UITextField = {
+        let textField = UITextField()
+        textField.placeholder = "搜索宠物用品、食品..."
+        textField.font = AppTheme.Font.body(size: 15)
+        textField.textColor = AppTheme.Color.textPrimary
+        textField.borderStyle = .none
+        return textField
+    }()
+
+    // 购物车按钮
+    private lazy var cartButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "cart"), for: .normal)
+        button.tintColor = AppTheme.Color.textPrimary
+        button.backgroundColor = AppTheme.Color.background
+        button.layer.cornerRadius = 20
+        button.layer.borderWidth = 1
+        button.layer.borderColor = AppTheme.Color.border.cgColor
+        return button
+    }()
+
+    // 主内容容器
+    private lazy var mainContainer: UIView = {
         let view = UIView()
         view.backgroundColor = AppTheme.Color.background
         return view
     }()
 
-    // 刷新控件
-    private lazy var refreshControl: UIRefreshControl = {
-        let refreshControl = UIRefreshControl()
-        refreshControl.tintColor = AppTheme.Color.primary
-        return refreshControl
-    }()
-
-    // 轮播图容器
-    private lazy var bannerContainer: UIView = {
+    // 左侧分类容器
+    private lazy var categoryContainer: UIView = {
         let view = UIView()
         view.backgroundColor = .white
-        view.layer.cornerRadius = AppTheme.Metrics.cornerRadiusMedium
-        view.clipsToBounds = true
         return view
     }()
 
-    // 轮播图视图
-    private lazy var bannerView: FSPagerView = {
-        let pagerView = FSPagerView()
-        pagerView.register(FSPagerViewCell.self, forCellWithReuseIdentifier: "bannerCell")
-        pagerView.automaticSlidingInterval = 3.0
-        pagerView.isInfinite = true
-        pagerView.interitemSpacing = 0
-        pagerView.backgroundColor = .white
-        pagerView.layer.cornerRadius = AppTheme.Metrics.cornerRadiusSmall
-        pagerView.clipsToBounds = true
-        // 设置代理和数据源
-        pagerView.dataSource = self
-        pagerView.delegate = self
-        return pagerView
+    // 分类表格视图
+    private lazy var categoryTableView: UITableView = {
+        let tableView = UITableView()
+        tableView.backgroundColor = .white
+        tableView.separatorStyle = .none
+        tableView.showsVerticalScrollIndicator = false
+        tableView.register(CategoryTableCell.self, forCellReuseIdentifier: CategoryTableCell.reuseIdentifier)
+        tableView.delegate = self
+        tableView.dataSource = self
+        return tableView
     }()
 
-    // 轮播图页面控制器
-    private lazy var pageControl: FSPageControl = {
-        let pageControl = FSPageControl()
-        pageControl.contentHorizontalAlignment = .center
-        pageControl.setFillColor(AppTheme.Color.primary, for: .selected)
-        pageControl.setFillColor(UIColor.lightGray.withAlphaComponent(0.3), for: .normal)
-        pageControl.itemSpacing = 8
-        pageControl.interitemSpacing = 8
-        return pageControl
-    }()
-
-    // 分类标题
-    private lazy var categoryTitleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "商品分类"
-        label.font = AppTheme.Font.title3()
-        label.textColor = AppTheme.Color.textPrimary
-        return label
-    }()
-
-    // 分类集合视图
-    private lazy var categoryCollectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumInteritemSpacing = 10
-        layout.minimumLineSpacing = 10
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
-
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = .white
-        collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(CategoryCell.self, forCellWithReuseIdentifier: CategoryCell.reuseIdentifier)
-        collectionView.delegate = self
-        return collectionView
-    }()
-
-    // 商品标题
-    private lazy var productTitleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "商品列表"
-        label.font = AppTheme.Font.title3()
-        label.textColor = AppTheme.Color.textPrimary
-        return label
+    // 右侧商品容器
+    private lazy var productContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppTheme.Color.background
+        return view
     }()
 
     // 商品集合视图
     private lazy var productCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 10
-        layout.minimumLineSpacing = 15
-        layout.sectionInset = UIEdgeInsets(top: 10, left: 15, bottom: 10, right: 15)
+        layout.minimumInteritemSpacing = 8
+        layout.minimumLineSpacing = 12
+        layout.sectionInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = AppTheme.Color.background
-        collectionView.showsVerticalScrollIndicator = false
-        collectionView.register(ProductCell.self, forCellWithReuseIdentifier: ProductCell.reuseIdentifier)
-        collectionView.isScrollEnabled = false // 禁用滚动，使用外部scrollView
+        collectionView.backgroundColor = .clear
+        collectionView.showsVerticalScrollIndicator = true
+        collectionView.register(ProductGridCell.self, forCellWithReuseIdentifier: ProductGridCell.reuseIdentifier)
+        collectionView.delegate = self
+        collectionView.dataSource = self
         return collectionView
     }()
 
     // 加载更多页脚
     private lazy var loadMoreFooter: MJRefreshAutoNormalFooter = {
         let footer = MJRefreshAutoNormalFooter { [weak self] in
-            self?.viewModel.loadMoreProducts()
+            self?.loadMoreProducts()
         }
         footer.setTitle("上拉加载更多", for: .idle)
         footer.setTitle("正在加载...", for: .refreshing)
@@ -144,10 +128,25 @@ class MallViewController: UIViewController {
         return footer
     }()
 
+    // 下拉刷新
+    private lazy var refreshControl: UIRefreshControl = {
+        let refreshControl = UIRefreshControl()
+        refreshControl.tintColor = AppTheme.Color.primary
+        return refreshControl
+    }()
+
     // MARK: - 属性
 
-    private let viewModel = MallViewModel()
     private let disposeBag = DisposeBag()
+
+    // 分类数据
+    private var categories: [CategoryModel] = []
+    private var selectedCategoryIndex: Int = 0
+
+    // 商品数据
+    private var products: [ProductModel] = []
+    private var currentPage = 1
+    private let pageSize = 20
 
     // MARK: - 生命周期方法
 
@@ -155,267 +154,255 @@ class MallViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupBindings()
-
-        // 加载初始数据
-        viewModel.loadInitialData()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-
-        // 更新商品集合视图高度
-        updateProductCollectionViewHeight()
+        setupMockData()
     }
 
     // MARK: - UI设置
 
     private func setupUI() {
-        // 设置导航栏
         title = "宠物商城"
         view.backgroundColor = AppTheme.Color.background
+        navigationController?.navigationBar.prefersLargeTitles = false
 
-        // 添加搜索栏
-        view.addSubview(searchBar)
-        searchBar.snp.makeConstraints { make in
+        setupSearchArea()
+        setupMainContent()
+
+        productCollectionView.mj_footer = loadMoreFooter
+        productCollectionView.refreshControl = refreshControl
+    }
+
+    private func setupSearchArea() {
+        view.addSubview(searchContainer)
+        searchContainer.addSubview(searchBar)
+        searchContainer.addSubview(cartButton)
+
+        searchBar.addSubview(searchIcon)
+        searchBar.addSubview(searchTextField)
+
+        searchContainer.snp.makeConstraints { make in
             make.top.equalTo(view.safeAreaLayoutGuide)
             make.left.right.equalToSuperview()
+            make.height.equalTo(60)
         }
 
-        // 添加滚动视图
-        view.addSubview(scrollView)
-        scrollView.snp.makeConstraints { make in
-            make.top.equalTo(searchBar.snp.bottom)
+        searchBar.snp.makeConstraints { make in
+            make.left.equalToSuperview().offset(16)
+            make.right.equalTo(cartButton.snp.left).offset(-12)
+            make.centerY.equalToSuperview()
+            make.height.equalTo(40)
+        }
+
+        cartButton.snp.makeConstraints { make in
+            make.right.equalToSuperview().offset(-16)
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(40)
+        }
+
+        searchIcon.snp.makeConstraints { make in
+            make.left.equalToSuperview().offset(12)
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(20)
+        }
+
+        searchTextField.snp.makeConstraints { make in
+            make.left.equalTo(searchIcon.snp.right).offset(8)
+            make.right.equalToSuperview().offset(-12)
+            make.centerY.equalToSuperview()
+        }
+    }
+
+    private func setupMainContent() {
+        view.addSubview(mainContainer)
+        mainContainer.addSubview(categoryContainer)
+        mainContainer.addSubview(productContainer)
+
+        categoryContainer.addSubview(categoryTableView)
+        productContainer.addSubview(productCollectionView)
+
+        mainContainer.snp.makeConstraints { make in
+            make.top.equalTo(searchContainer.snp.bottom)
             make.left.right.bottom.equalToSuperview()
         }
 
-        // 添加内容容器
-        scrollView.addSubview(contentView)
-        contentView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-            make.width.equalTo(view)
+        categoryContainer.snp.makeConstraints { make in
+            make.top.left.bottom.equalToSuperview()
+            make.width.equalTo(100)
         }
 
-        // 设置轮播图
-        setupBannerView()
-
-        // 设置分类区域
-        setupCategoryArea()
-
-        // 设置商品区域
-        setupProductArea()
-
-        // 设置加载更多
-        productCollectionView.mj_footer = loadMoreFooter
-    }
-
-    private func setupBannerView() {
-        contentView.addSubview(bannerContainer)
-        bannerContainer.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(AppTheme.Metrics.spacingMedium)
-            make.left.equalToSuperview().offset(AppTheme.Metrics.spacingMedium)
-            make.right.equalToSuperview().offset(-AppTheme.Metrics.spacingMedium)
-            make.height.equalTo(180)
+        productContainer.snp.makeConstraints { make in
+            make.top.right.bottom.equalToSuperview()
+            make.left.equalTo(categoryContainer.snp.right)
         }
 
-        bannerContainer.addSubview(bannerView)
-        bannerView.snp.makeConstraints { make in
+        categoryTableView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
 
-        bannerContainer.addSubview(pageControl)
-        pageControl.snp.makeConstraints { make in
-            make.bottom.equalToSuperview().offset(-AppTheme.Metrics.spacingSmall)
-            make.centerX.equalToSuperview()
-            make.height.equalTo(20)
-        }
-    }
-
-    private func setupCategoryArea() {
-        // 添加分类标题
-        contentView.addSubview(categoryTitleLabel)
-        categoryTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(bannerContainer.snp.bottom).offset(AppTheme.Metrics.spacingLarge)
-            make.left.equalToSuperview().offset(AppTheme.Metrics.spacingMedium)
-        }
-
-        // 添加分类集合视图
-        contentView.addSubview(categoryCollectionView)
-        categoryCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(categoryTitleLabel.snp.bottom).offset(AppTheme.Metrics.spacingMedium)
-            make.left.right.equalToSuperview()
-            make.height.equalTo(100) // 增加高度以适应内容
-        }
-    }
-
-    private func setupProductArea() {
-        // 添加商品标题
-        contentView.addSubview(productTitleLabel)
-        productTitleLabel.snp.makeConstraints { make in
-            make.top.equalTo(categoryCollectionView.snp.bottom).offset(AppTheme.Metrics.spacingLarge)
-            make.left.equalToSuperview().offset(AppTheme.Metrics.spacingMedium)
-        }
-
-        // 添加商品集合视图
-        contentView.addSubview(productCollectionView)
         productCollectionView.snp.makeConstraints { make in
-            make.top.equalTo(productTitleLabel.snp.bottom).offset(AppTheme.Metrics.spacingMedium)
-            make.left.right.equalToSuperview()
-            make.height.equalTo(500) // 初始高度，后续会动态调整
-            make.bottom.equalToSuperview().offset(-AppTheme.Metrics.spacingMedium)
+            make.edges.equalToSuperview()
         }
     }
 
     // MARK: - 数据绑定
 
     private func setupBindings() {
-        // 绑定刷新控件
-        refreshControl.rx.controlEvent(.valueChanged)
-            .subscribe(onNext: { [weak self] in
-                self?.viewModel.refreshData()
-                self?.refreshControl.endRefreshing()
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定搜索栏
-        searchBar.rx.text
+        // 搜索文本框绑定
+        searchTextField.rx.text
             .orEmpty
             .debounce(.milliseconds(500), scheduler: MainScheduler.instance)
             .distinctUntilChanged()
             .subscribe(onNext: { [weak self] query in
-                self?.viewModel.setSearchKeyword(query.isEmpty ? nil : query)
+                self?.searchProducts(query: query)
             })
             .disposed(by: disposeBag)
 
-        // 绑定轮播图数据
-        viewModel.hotProducts
-            .subscribe(onNext: { [weak self] products in
-                guard let self = self else { return }
-                self.pageControl.numberOfPages = products.count
-                self.bannerView.reloadData()
+        // 购物车按钮绑定
+        cartButton.rx.tap
+            .subscribe(onNext: { [weak self] in
+                self?.showCart()
             })
             .disposed(by: disposeBag)
 
-        // 绑定分类数据
-        viewModel.categories
-            .bind(to: categoryCollectionView.rx.items(cellIdentifier: CategoryCell.reuseIdentifier, cellType: CategoryCell.self)) { index, category, cell in
-                cell.configure(with: category)
-            }
-            .disposed(by: disposeBag)
-
-        // 监听分类数据加载完成，默认选中第一个分类
-        viewModel.categories
-            .skip(1) // 跳过初始空数组
-            .take(1) // 只取第一次有数据的事件
-            .subscribe(onNext: { [weak self] categories in
-                guard let self = self, !categories.isEmpty else { return }
-
-                // 默认选中第一个分类
-                let indexPath = IndexPath(item: 0, section: 0)
-                self.categoryCollectionView.selectItem(at: indexPath, animated: false, scrollPosition: .left)
-
-                // 通知ViewModel选中了第一个分类
-                if let firstCategory = categories.first {
-                    self.viewModel.selectCategory(firstCategory.id)
-                }
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定商品数据
-        viewModel.products
-            .bind(to: productCollectionView.rx.items(cellIdentifier: ProductCell.reuseIdentifier, cellType: ProductCell.self)) { index, product, cell in
-                cell.configure(with: product)
-            }
-            .disposed(by: disposeBag)
-
-        // 绑定分类选择
-        categoryCollectionView.rx.itemSelected
-            .subscribe(onNext: { [weak self] indexPath in
-                guard let self = self, let categories = self.viewModel.categories.value as? [ProductCategory], indexPath.item < categories.count else { return }
-                let category = categories[indexPath.item]
-                self.viewModel.selectCategory(category.id)
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定商品选择
-        productCollectionView.rx.itemSelected
-            .subscribe(onNext: { [weak self] indexPath in
-                guard let self = self, let products = self.viewModel.products.value as? [Product], indexPath.item < products.count else { return }
-                let product = products[indexPath.item]
-                self.showProductDetail(product)
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定加载状态
-        viewModel.isLoading
-            .subscribe(onNext: { [weak self] isLoading in
-                if !isLoading {
-                    self?.productCollectionView.mj_footer?.endRefreshing()
-                }
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定是否有更多数据
-        viewModel.hasMoreData
-            .subscribe(onNext: { [weak self] hasMore in
-                if !hasMore {
-                    self?.productCollectionView.mj_footer?.endRefreshingWithNoMoreData()
-                }
-            })
-            .disposed(by: disposeBag)
-
-        // 绑定错误消息
-        viewModel.errorMessage
-            .subscribe(onNext: { [weak self] message in
-                Utilities.showError(in: self?.view ?? UIView(), message: message)
-            })
-            .disposed(by: disposeBag)
-
-        // 监听商品数据变化，更新集合视图高度
-        viewModel.products
-            .subscribe(onNext: { [weak self] _ in
-                self?.updateProductCollectionViewHeight()
+        // 下拉刷新绑定
+        refreshControl.rx.controlEvent(.valueChanged)
+            .subscribe(onNext: { [weak self] in
+                self?.refreshData()
             })
             .disposed(by: disposeBag)
     }
 
-    // MARK: - 辅助方法
+    // MARK: - 数据处理
 
-    private func updateProductCollectionViewHeight() {
-        // 计算商品集合视图的内容高度
-        let productsCount = viewModel.products.value.count
-        if productsCount == 0 {
-            // 如果没有商品，设置一个最小高度
-            productCollectionView.snp.updateConstraints { make in
-                make.height.equalTo(200)
-            }
-            return
-        }
+    private func setupMockData() {
+        // 设置分类数据
+        categories = [
+            CategoryModel(id: 0, name: "全部", icon: "square.grid.2x2"),
+            CategoryModel(id: 1, name: "狗粮", icon: "pawprint"),
+            CategoryModel(id: 2, name: "猫粮", icon: "cat"),
+            CategoryModel(id: 3, name: "玩具", icon: "gamecontroller"),
+            CategoryModel(id: 4, name: "用品", icon: "bag"),
+            CategoryModel(id: 5, name: "医疗", icon: "cross.case"),
+            CategoryModel(id: 6, name: "美容", icon: "scissors"),
+            CategoryModel(id: 7, name: "服装", icon: "tshirt"),
+            CategoryModel(id: 8, name: "零食", icon: "heart"),
+            CategoryModel(id: 9, name: "清洁", icon: "sparkles")
+        ]
 
-        // 计算行数（每行2个商品）
-        let rows = ceil(Double(productsCount) / 2.0)
+        // 设置商品数据
+        loadProducts(for: selectedCategoryIndex)
 
-        // 计算每个单元格的高度（宽度的1.5倍）
-        let cellWidth = (view.bounds.width - 40) / 2 // 考虑左右边距和中间间距
-        let cellHeight = cellWidth * 1.5
+        // 刷新界面
+        categoryTableView.reloadData()
+        productCollectionView.reloadData()
 
-        // 计算总高度（包括行间距和上下边距）
-        let totalHeight = rows * cellHeight + (rows - 1) * 15 + 20 // 15是行间距，20是上下边距
-
-        // 更新约束
-        productCollectionView.snp.updateConstraints { make in
-            make.height.equalTo(totalHeight)
-        }
-
-        // 强制布局更新
-        view.layoutIfNeeded()
+        // 默认选中第一个分类
+        let indexPath = IndexPath(row: 0, section: 0)
+        categoryTableView.selectRow(at: indexPath, animated: false, scrollPosition: .none)
     }
 
-    private func showProductDetail(_ product: Product) {
-        // 这里可以跳转到商品详情页
+    private func loadProducts(for categoryIndex: Int) {
+        products.removeAll()
+
+        // 根据分类生成不同的商品
+        let categoryName = categories[categoryIndex].name
+
+        for i in 1...20 {
+            let product = ProductModel(
+                id: i,
+                name: "\(categoryName)商品\(i)",
+                price: Double(99 + i * 10),
+                originalPrice: i % 3 == 0 ? Double(149 + i * 10) : nil,
+                imageUrl: "https://picsum.photos/200/200?random=\(categoryIndex * 20 + i)",
+                sales: Int.random(in: 10...999)
+            )
+            products.append(product)
+        }
+
+        productCollectionView.reloadData()
+    }
+
+    // MARK: - 事件处理
+
+    private func searchProducts(query: String) {
+        print("搜索商品: \(query)")
+        // TODO: 实现搜索功能
+    }
+
+    private func showCart() {
+        print("显示购物车")
+        // TODO: 跳转到购物车页面
+    }
+
+    private func refreshData() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.refreshControl.endRefreshing()
+            self?.loadProducts(for: self?.selectedCategoryIndex ?? 0)
+        }
+    }
+
+    private func loadMoreProducts() {
+        // 模拟加载更多
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.loadMoreFooter.endRefreshing()
+        }
+    }
+
+    private func showProductDetail(_ product: ProductModel) {
         print("查看商品详情: \(product.name)")
+        // TODO: 跳转到商品详情页
+    }
+}
 
-        // 显示提示信息
-        Utilities.showInfo(in: view, message: "商品详情功能即将上线，敬请期待")
+// MARK: - UITableViewDataSource
+
+extension MallViewController: UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return categories.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: CategoryTableCell.reuseIdentifier, for: indexPath) as! CategoryTableCell
+        let category = categories[indexPath.row]
+        cell.configure(with: category, isSelected: indexPath.row == selectedCategoryIndex)
+        return cell
+    }
+}
+
+// MARK: - UITableViewDelegate
+
+extension MallViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 60
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedCategoryIndex = indexPath.row
+        loadProducts(for: selectedCategoryIndex)
+        tableView.reloadData() // 刷新选中状态
+    }
+}
+
+// MARK: - UICollectionViewDataSource
+
+extension MallViewController: UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return products.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ProductGridCell.reuseIdentifier, for: indexPath) as! ProductGridCell
+        let product = products[indexPath.item]
+        cell.configure(with: product)
+        return cell
+    }
+}
+
+// MARK: - UICollectionViewDelegate
+
+extension MallViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let product = products[indexPath.item]
+        showProductDetail(product)
     }
 }
 
@@ -423,67 +410,13 @@ class MallViewController: UIViewController {
 
 extension MallViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        if collectionView == categoryCollectionView {
-            // 分类单元格大小
-            return CGSize(width: 70, height: 90) // 调整宽度和高度
-        } else {
-            // 商品单元格大小
-            let width = (collectionView.bounds.width - 40) / 2 // 考虑左右边距和中间间距
-            return CGSize(width: width, height: width * 1.5)
-        }
-    }
-}
+        // 计算商品单元格大小 - 右侧区域2列布局
+        let containerWidth = collectionView.bounds.width
+        let spacing: CGFloat = 8
+        let sectionInsets: CGFloat = 16 // 左右各8
+        let itemWidth = (containerWidth - sectionInsets - spacing) / 2
+        let itemHeight = itemWidth * 1.3 // 高宽比1.3:1
 
-// MARK: - FSPagerViewDataSource, FSPagerViewDelegate
-
-extension MallViewController: FSPagerViewDataSource, FSPagerViewDelegate {
-    func numberOfItems(in pagerView: FSPagerView) -> Int {
-        return viewModel.hotProducts.value.count
-    }
-
-    func pagerView(_ pagerView: FSPagerView, cellForItemAt index: Int) -> FSPagerViewCell {
-        let cell = pagerView.dequeueReusableCell(withReuseIdentifier: "bannerCell", at: index)
-        let product = viewModel.hotProducts.value[index]
-
-        // 设置图片
-        cell.imageView?.contentMode = .scaleAspectFill
-
-        // 处理图片URL
-        if let imageUrl = product.mainImage, !imageUrl.isEmpty {
-            let url = URL(string: imageUrl)
-            cell.imageView?.kf.setImage(
-                with: url,
-                placeholder: UIImage(systemName: "photo"),
-                options: [.transition(.fade(0.2))]
-            )
-        } else {
-            // 使用占位图
-            cell.imageView?.image = UIImage(systemName: "photo")
-        }
-
-        // 设置标题
-        cell.textLabel?.text = product.name
-        cell.textLabel?.textAlignment = .center
-        cell.textLabel?.textColor = .white
-        cell.textLabel?.font = AppTheme.Font.body()
-        cell.textLabel?.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-
-        return cell
-    }
-
-    func pagerView(_ pagerView: FSPagerView, didSelectItemAt index: Int) {
-        let product = viewModel.hotProducts.value[index]
-        showProductDetail(product)
-
-        // 取消选中状态
-        pagerView.deselectItem(at: index, animated: true)
-    }
-
-    func pagerViewWillEndDragging(_ pagerView: FSPagerView, targetIndex: Int) {
-        pageControl.currentPage = targetIndex
-    }
-
-    func pagerViewDidEndScrollAnimation(_ pagerView: FSPagerView) {
-        pageControl.currentPage = pagerView.currentIndex
+        return CGSize(width: itemWidth, height: itemHeight)
     }
 }
