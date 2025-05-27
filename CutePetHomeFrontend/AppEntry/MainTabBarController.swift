@@ -55,10 +55,11 @@ class MainTabBarController: UITabBarController {
         // 创建视图控制器
         let homeVC = createHomeViewController()
         let mallVC = createMallViewController()
+        let cartVC = createCartViewController()
         let profileVC = createProfileViewController()
 
         // 设置TabBar视图控制器
-        viewControllers = [homeVC, mallVC, profileVC]
+        viewControllers = [homeVC, mallVC, cartVC, profileVC]
     }
 
     // MARK: - 创建视图控制器
@@ -88,12 +89,30 @@ class MainTabBarController: UITabBarController {
         // 设置TabBar项
         mallVC.tabBarItem = UITabBarItem(
             title: "商城",
+            image: UIImage(systemName: "storefront"),
+            selectedImage: UIImage(systemName: "storefront.fill")
+        )
+
+        // 创建导航控制器
+        let navController = UINavigationController(rootViewController: mallVC)
+        setupNavigationBar(navController.navigationBar)
+
+        return navController
+    }
+
+    private func createCartViewController() -> UINavigationController {
+        // 创建购物车视图控制器
+        let cartVC = CartViewController()
+
+        // 设置TabBar项
+        cartVC.tabBarItem = UITabBarItem(
+            title: "购物车",
             image: UIImage(systemName: "cart"),
             selectedImage: UIImage(systemName: "cart.fill")
         )
 
         // 创建导航控制器
-        let navController = UINavigationController(rootViewController: mallVC)
+        let navController = UINavigationController(rootViewController: cartVC)
         setupNavigationBar(navController.navigationBar)
 
         return navController

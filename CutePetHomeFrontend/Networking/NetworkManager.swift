@@ -245,6 +245,58 @@ class NetworkManager {
             }
             .asObservable()
     }
-}
 
-// API响应模型已移至Models/APIModels.swift
+    /// 发送分页网络请求（专门处理后端分页响应格式）
+    /// - Parameter target: API目标
+    /// - Returns: Observable序列，包含数据和分页信息
+    func requestWithPagination<T: Codable>(_ target: PetAPI) -> Observable<(data: [T], pagination: Pagination?)> {
+        return provider.rx.request(target)
+            .filterSuccessfulStatusCodes()
+            .map { response in
+                // 打印原始响应数据用于调试
+                if let responseString = String(data: response.data, encoding: .utf8) {
+                    print("API Response: \(responseString)")
+                }
+
+                // 解析JSON
+                let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [String: Any]
+
+                guard let json = json,
+                      let code = json["code"] as? Int,
+                      code == 200 else {
+                    let message = (json?["message"] as? String) ?? "请求失败"
+                    throw NSError(domain: "API Error", code: json?["code"] as? Int ?? 500, userInfo: [NSLocalizedDescriptionKey: message])
+                }
+
+                // 解析data字段（后端返回的是Map结构）
+                guard let dataMap = json["data"] as? [String: Any] else {
+                    throw NSError(domain: "API Error", code: 500, userInfo: [NSLocalizedDescriptionKey: "数据格式错误: data字段不存在或格式不正确"])
+                }
+
+                // 解析商品列表
+                var items: [T] = []
+                if let productsArray = dataMap["products"] as? [[String: Any]] {
+                    let productsData = try JSONSerialization.data(withJSONObject: productsArray, options: [])
+                    items = try JSONDecoder().decode([T].self, from: productsData)
+                } else {
+                    print("Warning: products字段不存在或格式不正确")
+                    print("dataMap keys: \(dataMap.keys)")
+                }
+
+                // 解析分页信息 - 先尝试从data内部获取，再尝试从顶层获取
+                var pagination: Pagination?
+                if let paginationMap = dataMap["pagination"] as? [String: Any] {
+                    let paginationData = try JSONSerialization.data(withJSONObject: paginationMap, options: [])
+                    pagination = try JSONDecoder().decode(Pagination.self, from: paginationData)
+                } else if let topLevelPagination = json["pagination"] as? [String: Any] {
+                    let paginationData = try JSONSerialization.data(withJSONObject: topLevelPagination, options: [])
+                    pagination = try JSONDecoder().decode(Pagination.self, from: paginationData)
+                } else {
+                    print("Warning: pagination字段不存在")
+                }
+
+                return (data: items, pagination: pagination)
+            }
+            .asObservable()
+    }
+}

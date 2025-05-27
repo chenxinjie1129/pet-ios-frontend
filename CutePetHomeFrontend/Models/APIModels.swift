@@ -26,12 +26,6 @@ struct Pagination: Codable {
     let pagePieces: Int
     let totalPieces: Int
 
-    enum CodingKeys: String, CodingKey {
-        case totalPage = "total_page"
-        case currentPage = "current_page"
-        case pagePieces = "page_pieces"
-        case totalPieces = "total_pieces"
-    }
 }
 
 /// 空响应，用于处理没有返回数据的API

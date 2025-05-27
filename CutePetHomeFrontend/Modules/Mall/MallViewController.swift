@@ -138,6 +138,7 @@ class MallViewController: UIViewController {
     // MARK: - 属性
 
     private let disposeBag = DisposeBag()
+    private let viewModel = MallViewModel()
 
     // 分类数据
     private var categories: [CategoryModel] = []
@@ -145,8 +146,6 @@ class MallViewController: UIViewController {
 
     // 商品数据
     private var products: [ProductModel] = []
-    private var currentPage = 1
-    private let pageSize = 20
 
     // MARK: - 生命周期方法
 
@@ -154,7 +153,7 @@ class MallViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupBindings()
-        setupMockData()
+        viewModel.loadInitialData()
     }
 
     // MARK: - UI设置
@@ -246,14 +245,49 @@ class MallViewController: UIViewController {
     // MARK: - 数据绑定
 
     private func setupBindings() {
+        // 绑定ViewModel数据
+        viewModel.categories
+            .subscribe(onNext: { [weak self] categories in
+                self?.categories = categories.map { CategoryModel(from: $0) }
+                self?.categoryTableView.reloadData()
+
+                // 默认选择第一个分类
+                if !categories.isEmpty {
+                    let indexPath = IndexPath(row: 0, section: 0)
+                    self?.categoryTableView.selectRow(at: indexPath, animated: false, scrollPosition: .none)
+                    self?.selectedCategoryIndex = 0
+                }
+            })
+            .disposed(by: disposeBag)
+
+        viewModel.products
+            .subscribe(onNext: { [weak self] products in
+                self?.products = products.map { ProductModel(from: $0) }
+                self?.productCollectionView.reloadData()
+            })
+            .disposed(by: disposeBag)
+
+        viewModel.isLoading
+            .subscribe(onNext: { [weak self] isLoading in
+                if !isLoading {
+                    self?.refreshControl.endRefreshing()
+                    self?.loadMoreFooter.endRefreshing()
+                }
+            })
+            .disposed(by: disposeBag)
+
+        viewModel.errorMessage
+            .subscribe(onNext: { [weak self] message in
+                Utilities.showError(in: self?.view ?? UIView(), message: message)
+            })
+            .disposed(by: disposeBag)
+
         // 搜索文本框绑定
         searchTextField.rx.text
             .orEmpty
             .debounce(.milliseconds(500), scheduler: MainScheduler.instance)
             .distinctUntilChanged()
-            .subscribe(onNext: { [weak self] query in
-                self?.searchProducts(query: query)
-            })
+            .bind(to: viewModel.searchKeyword)
             .disposed(by: disposeBag)
 
         // 购物车按钮绑定
@@ -266,90 +300,30 @@ class MallViewController: UIViewController {
         // 下拉刷新绑定
         refreshControl.rx.controlEvent(.valueChanged)
             .subscribe(onNext: { [weak self] in
-                self?.refreshData()
+                self?.viewModel.refreshData()
             })
             .disposed(by: disposeBag)
-    }
 
-    // MARK: - 数据处理
-
-    private func setupMockData() {
-        // 设置分类数据
-        categories = [
-            CategoryModel(id: 0, name: "全部", icon: "square.grid.2x2"),
-            CategoryModel(id: 1, name: "狗粮", icon: "pawprint"),
-            CategoryModel(id: 2, name: "猫粮", icon: "cat"),
-            CategoryModel(id: 3, name: "玩具", icon: "gamecontroller"),
-            CategoryModel(id: 4, name: "用品", icon: "bag"),
-            CategoryModel(id: 5, name: "医疗", icon: "cross.case"),
-            CategoryModel(id: 6, name: "美容", icon: "scissors"),
-            CategoryModel(id: 7, name: "服装", icon: "tshirt"),
-            CategoryModel(id: 8, name: "零食", icon: "heart"),
-            CategoryModel(id: 9, name: "清洁", icon: "sparkles")
-        ]
-
-        // 设置商品数据
-        loadProducts(for: selectedCategoryIndex)
-
-        // 刷新界面
-        categoryTableView.reloadData()
-        productCollectionView.reloadData()
-
-        // 默认选中第一个分类
-        let indexPath = IndexPath(row: 0, section: 0)
-        categoryTableView.selectRow(at: indexPath, animated: false, scrollPosition: .none)
-    }
-
-    private func loadProducts(for categoryIndex: Int) {
-        products.removeAll()
-
-        // 根据分类生成不同的商品
-        let categoryName = categories[categoryIndex].name
-
-        for i in 1...20 {
-            let product = ProductModel(
-                id: i,
-                name: "\(categoryName)商品\(i)",
-                price: Double(99 + i * 10),
-                originalPrice: i % 3 == 0 ? Double(149 + i * 10) : nil,
-                imageUrl: "https://picsum.photos/200/200?random=\(categoryIndex * 20 + i)",
-                sales: Int.random(in: 10...999)
-            )
-            products.append(product)
-        }
-
-        productCollectionView.reloadData()
+        // 上拉加载更多绑定
+        loadMoreFooter.setRefreshingTarget(self, refreshingAction: #selector(loadMoreProducts))
     }
 
     // MARK: - 事件处理
 
-    private func searchProducts(query: String) {
-        print("搜索商品: \(query)")
-        // TODO: 实现搜索功能
-    }
-
     private func showCart() {
-        print("显示购物车")
-        // TODO: 跳转到购物车页面
+        // 跳转到购物车Tab
+        tabBarController?.selectedIndex = 2
     }
 
-    private func refreshData() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.refreshControl.endRefreshing()
-            self?.loadProducts(for: self?.selectedCategoryIndex ?? 0)
-        }
-    }
 
-    private func loadMoreProducts() {
-        // 模拟加载更多
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.loadMoreFooter.endRefreshing()
-        }
+
+    @objc private func loadMoreProducts() {
+        viewModel.loadMoreProducts()
     }
 
     private func showProductDetail(_ product: ProductModel) {
-        print("查看商品详情: \(product.name)")
-        // TODO: 跳转到商品详情页
+        let detailVC = ProductDetailViewController(productId: Int64(product.id))
+        navigationController?.pushViewController(detailVC, animated: true)
     }
 }
 
@@ -377,7 +351,14 @@ extension MallViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         selectedCategoryIndex = indexPath.row
-        loadProducts(for: selectedCategoryIndex)
+
+        // 获取选中的分类ID
+        let selectedCategory = categories[indexPath.row]
+        let categoryId = selectedCategory.id == 0 ? nil : selectedCategory.id // 0表示全部分类
+
+        // 通知ViewModel更新分类
+        viewModel.selectCategory(categoryId)
+
         tableView.reloadData() // 刷新选中状态
     }
 }
